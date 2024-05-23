@@ -7,8 +7,6 @@ interface connect {
   endDot: null | [number, number];
 }
 
-
-
 export default function Dashboard() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 7, height: 6 });
@@ -19,7 +17,7 @@ export default function Dashboard() {
     "player1",
   );
 
-  const [history, setHistory] = useState<connect[]>([])
+  const [history, setHistory] = useState<connect[]>([]);
 
   const [scores, setScores] = useState<{ player1: number; player2: number }>({
     player1: 0,
@@ -102,47 +100,6 @@ export default function Dashboard() {
     }
   };
 
-  const checkForSquare = (dot: [number, number], canvas: any) => {
-    const [row, col] = dot;
-    // Check if a square is completed
-    if (
-      row > 0 &&
-      row < size.height &&
-      col > 0 &&
-      col < size.width &&
-      connect.endDot
-    ) {
-      const [x1, y1] = connect.endDot;
-  
-      // Check if all four sides are connected
-      const side1Connected = connect.startDot && (x1 === row) && (y1 === col - 1 || y1 === col);
-      const side2Connected = connect.startDot && (y1 === col) && (x1 === row - 1 || x1 === row);
-      const side3Connected = connect.startDot && (x1 === row - 1) && (y1 === col - 1 || y1 === col);
-      const side4Connected = connect.startDot && (y1 === col - 1) && (x1 === row - 1 || x1 === row);
-  
-      if (side1Connected && side2Connected && side3Connected && side4Connected) {
-        // Award a point to the current player
-        setScores((prevScores) => ({
-          ...prevScores,
-          [currentPlayer]: prevScores[currentPlayer] + 1,
-        }));
-        // Fill the square with the current player's color
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.fillStyle = currentPlayer === "player1" ? "#22d3ee" : "#fb7185"; // Player color
-        ctx.fillRect(
-          Math.min(y1, col - 1) * dotSpacing + dotSpacing / 2,
-          Math.min(x1, row - 1) * dotSpacing + dotSpacing / 2,
-          dotSpacing,
-          dotSpacing,
-        );
-      }
-    }
-  };
-  
-  
-
- 
   // Draw lines between dots
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -150,24 +107,81 @@ export default function Dashboard() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     if (connect.startDot && connect.endDot) {
-      const [x1, y1] = connect.startDot;
-      const [x2, y2] = connect.endDot;
-  
+      let [x1, y1] = connect.startDot;
+      let [x2, y2] = connect.endDot;
+
+      // Swap the positions if necessary to ensure x1 and y1 are always smaller than x2 and y2
+      if (x1 > x2 || (x1 === x2 && y1 > y2)) {
+        [x1, x2] = [x2, x1];
+        [y1, y2] = [y2, y1];
+      }
+
       if (Math.abs(x1 - x2) > 0 && Math.abs(y1 - y2) > 0) {
         return; // Return without drawing the diagonal line
       }
-  
+
       ctx.beginPath();
-      ctx.moveTo(y1 * dotSpacing + dotSpacing / 2, x1 * dotSpacing + dotSpacing / 2);
-      ctx.lineTo(y2 * dotSpacing + dotSpacing / 2, x2 * dotSpacing + dotSpacing / 2);
+      ctx.moveTo(
+        y1 * dotSpacing + dotSpacing / 2,
+        x1 * dotSpacing + dotSpacing / 2,
+      );
+      ctx.lineTo(
+        y2 * dotSpacing + dotSpacing / 2,
+        x2 * dotSpacing + dotSpacing / 2,
+      );
       ctx.strokeStyle = currentPlayer === "player1" ? "#22d3ee" : "#fb7185"; // Line color
       ctx.lineWidth = 2; // Line width
       ctx.stroke();
-  
-      setCurrentPlayer(() => (currentPlayer === "player1" ? "player2" : "player1"));
-      checkForSquare(connect.endDot, canvas); // Call checkForSquare with the endDot coordinates
+
+      setCurrentPlayer(() =>
+        currentPlayer === "player1" ? "player2" : "player1",
+      );
+
+      // Update history with the dots in the correct order
+      setHistory((prevHistory) => [
+        ...prevHistory,
+        { startDot: [x1, y1], endDot: [x2, y2] },
+      ]);
     }
   }, [connect]);
+
+  useEffect(() => {
+    // Define a function to check if four dots are connected
+    const checkForFourConnected = () => {
+      // Iterate over each item in the history array
+      for (let i = 0; i < history.length; i++) {
+        const dot1 = history[i]?.startDot;
+        const dot2 = history[i]?.endDot;
+        
+        // Check if the dots are not null
+        if (dot1 && dot2) {
+          // Iterate over the rest of the history array
+          for (let j = i + 1; j < history.length; j++) {
+            const dot3 = history[j]?.startDot;
+            const dot4 = history[j]?.endDot;
+            
+            // Check if the dots are not null
+            if (dot3 && dot4) {
+              // Check if all four sides are connected
+              if (
+                (dot1[0] === dot3[0] && dot2[0] === dot4[0] && dot1[1] === dot2[1] && dot3[1] === dot4[1]) || // Horizontal sides
+                (dot1[1] === dot3[1] && dot2[1] === dot4[1] && dot1[0] === dot2[0] && dot3[0] === dot4[0]) || // Vertical sides
+                (Math.abs(dot1[0] - dot3[0]) === 1 && Math.abs(dot1[1] - dot3[1]) === 1 && 
+                 Math.abs(dot1[0] - dot4[0]) === 1 && Math.abs(dot1[1] - dot4[1]) === 1) // Adjacent sides
+              ) {
+                console.log("Square completed!");
+                // Add your logic to award points and fill the square
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    // Call the function to check for four connected dots
+    checkForFourConnected();
+  }, [history]);
+  
   
 
   return (
