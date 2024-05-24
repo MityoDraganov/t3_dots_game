@@ -16,6 +16,9 @@ export default function Dashboard() {
   const [currentPlayer, setCurrentPlayer] = useState<"player1" | "player2">(
     "player1",
   );
+  const [completedSquares, setCompletedSquares] = useState<Set<string>>(
+    new Set(),
+  );
 
   const [history, setHistory] = useState<connect[]>([]);
 
@@ -28,6 +31,56 @@ export default function Dashboard() {
     startDot: null,
     endDot: null,
   });
+
+  const getCursorPositionInPixels = (
+    e: React.MouseEvent<HTMLCanvasElement>,
+  ): [number, number] | null => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const x =
+      e.clientX -
+      rect.left -
+      (window.scrollX || document.documentElement.scrollLeft);
+    const y =
+      e.clientY -
+      rect.top -
+      (window.scrollY || document.documentElement.scrollTop);
+    return [x, y];
+  };
+
+  const getDotFromCoordinates = (
+    position: [number, number],
+  ): [number, number] => {
+    const [x, y] = position;
+    const col = Math.floor(x / dotSpacing);
+    const row = Math.floor(y / dotSpacing);
+    return [row, col];
+  };
+
+  const handleDotClick = (
+    e: React.MouseEvent<HTMLCanvasElement>,
+    option: "startDot" | "endDot",
+  ) => {
+    const cursorPosition = getCursorPositionInPixels(e);
+    if (cursorPosition) {
+      const [row, col] = getDotFromCoordinates(cursorPosition);
+      if (option === "startDot") {
+        setConnect({ startDot: [row, col], endDot: null });
+      } else if (option === "endDot" && connect.startDot) {
+        const [startRow, startCol] = connect.startDot;
+        const isValidMove =
+          Math.abs(row - startRow) <= 1 && Math.abs(col - startCol) <= 1;
+        if (isValidMove) {
+          setConnect((prevState) => ({
+            ...prevState,
+            endDot: [row, col],
+          }));
+        } else {
+          console.log("Invalid move!");
+        }
+      }
+    }
+  };
 
   // Set canvas and dots
   useEffect(() => {
@@ -55,51 +108,6 @@ export default function Dashboard() {
     }
   }, [size]);
 
-  // Get cursor position in pixels
-  const getCursorPositionInPixels = (
-    e: React.MouseEvent<HTMLCanvasElement>,
-  ): [number, number] | null => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return null;
-    const x =
-      e.clientX -
-      rect.left -
-      (window.scrollX || document.documentElement.scrollLeft);
-    const y =
-      e.clientY -
-      rect.top -
-      (window.scrollY || document.documentElement.scrollTop);
-    return [x, y];
-  };
-
-  // Get corresponding row and column based on dot spacing
-  const getDotFromCoordinates = (
-    position: [number, number],
-  ): [number, number] => {
-    const [x, y] = position;
-    const col = Math.floor(x / dotSpacing);
-    const row = Math.floor(y / dotSpacing);
-    return [row, col];
-  };
-
-  // Handle dot click
-  const handleDotClick = (
-    e: React.MouseEvent<HTMLCanvasElement>,
-    option: "startDot" | "endDot",
-  ) => {
-    const cursorPosition = getCursorPositionInPixels(e);
-    if (cursorPosition) {
-      const [row, col] = getDotFromCoordinates(cursorPosition);
-      if (option === "startDot") {
-        setConnect({ startDot: null, endDot: null });
-      }
-      setConnect((prevState) => ({
-        ...prevState,
-        [option]: [row, col],
-      }));
-    }
-  };
-
   // Draw lines between dots
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -120,6 +128,25 @@ export default function Dashboard() {
         return; // Return without drawing the diagonal line
       }
 
+      // Check if the line already exists in history
+      const lineExists = history.some(
+        (entry) =>
+          entry.startDot &&
+          entry.endDot &&
+          ((entry.startDot[0] === x1 &&
+            entry.startDot[1] === y1 &&
+            entry.endDot[0] === x2 &&
+            entry.endDot[1] === y2) ||
+            (entry.startDot[0] === x2 &&
+              entry.startDot[1] === y2 &&
+              entry.endDot[0] === x1 &&
+              entry.endDot[1] === y1)),
+      );
+
+      if (lineExists) {
+        return; // Don't draw the line if it already exists
+      }
+
       ctx.beginPath();
       ctx.moveTo(
         y1 * dotSpacing + dotSpacing / 2,
@@ -133,10 +160,6 @@ export default function Dashboard() {
       ctx.lineWidth = 2; // Line width
       ctx.stroke();
 
-      setCurrentPlayer(() =>
-        currentPlayer === "player1" ? "player2" : "player1",
-      );
-
       // Update history with the dots in the correct order
       setHistory((prevHistory) => [
         ...prevHistory,
@@ -145,66 +168,126 @@ export default function Dashboard() {
     }
   }, [connect]);
 
+  //check for squares
   useEffect(() => {
-    // Define a function to check if four dots are connected
-    const checkForFourConnected = () => {
-      // Iterate over each item in the history array
-      for (let i = 0; i < history.length; i++) {
-        const dot1 = history[i]?.startDot;
-        const dot2 = history[i]?.endDot;
-        
-        // Check if the dots are not null
-        if (dot1 && dot2) {
-          // Iterate over the rest of the history array
-          for (let j = i + 1; j < history.length; j++) {
-            const dot3 = history[j]?.startDot;
-            const dot4 = history[j]?.endDot;
-            
-            // Check if the dots are not null
-            if (dot3 && dot4) {
-              // Check if all four sides are connected
-              if (
-                (dot1[0] === dot3[0] && dot2[0] === dot4[0] && dot1[1] === dot2[1] && dot3[1] === dot4[1]) || // Horizontal sides
-                (dot1[1] === dot3[1] && dot2[1] === dot4[1] && dot1[0] === dot2[0] && dot3[0] === dot4[0]) || // Vertical sides
-                (Math.abs(dot1[0] - dot3[0]) === 1 && Math.abs(dot1[1] - dot3[1]) === 1 && 
-                 Math.abs(dot1[0] - dot4[0]) === 1 && Math.abs(dot1[1] - dot4[1]) === 1) // Adjacent sides
-              ) {
-                console.log("Square completed!");
-                // Add your logic to award points and fill the square
+    const checkForSquares = () => {
+      history.forEach(({ startDot, endDot }) => {
+        if (startDot && endDot) {
+          const [x1, y1] = startDot;
+          const [x2, y2] = endDot;
+
+          // Check for vertical and horizontal lines
+          if (x1 === x2 || y1 === y2) {
+            const [topLeft, topRight, bottomLeft, bottomRight] = [
+              [x1, y1],
+              x1 === x2 ? [x1, y1 + 1] : [x1 + 1, y1],
+              x1 === x2 ? [x1 + 1, y1] : [x1, y1 + 1],
+              [x1 + 1, y1 + 1],
+            ];
+
+            // Check if all sides of a square are present
+            const squareSides = [
+              [
+                [topLeft, topRight],
+                [bottomLeft, bottomRight],
+              ],
+              [
+                [topLeft, bottomLeft],
+                [topRight, bottomRight],
+              ],
+            ];
+            const allSidesPresent = squareSides.every((sides) =>
+              sides.every(([start, end]) =>
+                history.some(
+                  (line) =>
+                    line.startDot &&
+                    line.endDot &&
+                    start &&
+                    end &&
+                    ((line.startDot[0] === start[0] &&
+                      line.startDot[1] === start[1] &&
+                      line.endDot[0] === end[0] &&
+                      line.endDot[1] === end[1]) ||
+                      (line.startDot[0] === end[0] &&
+                        line.startDot[1] === end[1] &&
+                        line.endDot[0] === start[0] &&
+                        line.endDot[1] === start[1])),
+                ),
+              ),
+            );
+
+            if (allSidesPresent) {
+              const squareKey = `${topLeft}-${topRight}-${bottomLeft}-${bottomRight}`;
+              if (!completedSquares.has(squareKey)) {
+                completedSquares.add(squareKey);
+                setCompletedSquares(completedSquares);
+
+                // Award a point to the player who completed the square
+                setScores((prevScores) => ({
+                  ...prevScores,
+                  [currentPlayer]: scores[currentPlayer] + 1,
+                }));
+
+                // Fill the square with the color of the player who completed it
+                const ctx = canvasRef.current?.getContext("2d");
+                if (ctx) {
+                  const fillColor =
+                    currentPlayer === "player1"
+                      ? "rgba(251, 113, 133, 0.3)"
+                      : "rgba(34, 211, 238, 0.3)";
+                  ctx.fillStyle = fillColor;
+                  ctx.fillRect(
+                    y1 * dotSpacing + dotSpacing / 2,
+                    x1 * dotSpacing + dotSpacing / 2,
+                    dotSpacing,
+                    dotSpacing,
+                  );
+                }
               }
             }
           }
         }
-      }
+      });
     };
-    
-    // Call the function to check for four connected dots
-    checkForFourConnected();
+
+    checkForSquares();
+
+    setCurrentPlayer(() =>
+      currentPlayer === "player1" ? "player2" : "player1",
+    );
   }, [history]);
-  
-  
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-[10%]">
-      <h2 className="text-xl text-slate-200">
-        <span
-          className={`${currentPlayer === "player1" ? "text-[#22d3ee]" : "text-[#fb7185]"} text-2xl`}
-        >
-          {currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}
-        </span>
-        's turn!
-      </h2>
-      <canvas
-        ref={canvasRef}
-        width={size.width * dotSpacing}
-        height={size.height * dotSpacing}
-        onMouseDown={(e: React.MouseEvent<HTMLCanvasElement>) =>
-          handleDotClick(e, "startDot")
-        }
-        onMouseUp={(e: React.MouseEvent<HTMLCanvasElement>) =>
-          handleDotClick(e, "endDot")
-        }
-      />
+    <div className="flex h-full w-full flex-col justify-between gap-4 px-[1%] pb-[4%] pt-[1%] md:h-[65%]">
+      <div className="flex flex-col gap-2 text-slate-200">
+        <h2 className="text-2xl">Score</h2>
+        <div className="flex flex-col">
+          <p className="text-lg">Player1: {scores.player1}</p>
+          <p className="text-lg">Player2: {scores.player2}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center justify-center">
+        <h2 className="text-xl text-slate-200">
+          <span
+            className={`${currentPlayer === "player1" ? "text-[#22d3ee]" : "text-[#fb7185]"} text-2xl`}
+          >
+            {currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}
+          </span>
+          's turn!
+        </h2>
+        <canvas
+          ref={canvasRef}
+          width={size.width * dotSpacing}
+          height={size.height * dotSpacing}
+          onMouseDown={(e: React.MouseEvent<HTMLCanvasElement>) =>
+            handleDotClick(e, "startDot")
+          }
+          onMouseUp={(e: React.MouseEvent<HTMLCanvasElement>) =>
+            handleDotClick(e, "endDot")
+          }
+        />
+      </div>
     </div>
   );
 }
