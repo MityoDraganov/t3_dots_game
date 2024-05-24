@@ -118,6 +118,10 @@ export default function Dashboard() {
       let [x1, y1] = connect.startDot;
       let [x2, y2] = connect.endDot;
 
+      if(x1 === x2 && y1 === y2){
+        return;
+      }
+
       // Swap the positions if necessary to ensure x1 and y1 are always smaller than x2 and y2
       if (x1 > x2 || (x1 === x2 && y1 > y2)) {
         [x1, x2] = [x2, x1];
