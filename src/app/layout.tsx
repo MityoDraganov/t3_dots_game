@@ -20,8 +20,8 @@ export default function RootLayout({
   PageProps: any;
 }) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      <body className="h-full">
+    <html lang="en" className={`${GeistSans.variable} `}>
+      <body className="h-full bg-slate-900">
         <TRPCReactProvider>
           <ClerkProvider {...PageProps}>
             <NavBar />

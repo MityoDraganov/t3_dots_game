@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -6,24 +9,25 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+//import { api } from "~/lib/api";
+import { api } from '~/trpc/react';
 
 export default function Leaderboard() {
+
+      const {data} = api.leaderboard.getAllUsers.useQuery();
+      console.log(data);
+
+
   return (
-    <Table className="w-1/2 m-auto">
+    <Table className="m-auto w-1/2">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[100px]">Invoice</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Method</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
+          <TableHead className="w-[100px]">Greeting</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         <TableRow>
-          <TableCell className="font-medium">INV001</TableCell>
-          <TableCell>Paid</TableCell>
-          <TableCell>Credit Card</TableCell>
-          <TableCell className="text-right">$250.00</TableCell>
+          <TableCell className="font-medium"></TableCell>
         </TableRow>
       </TableBody>
     </Table>
