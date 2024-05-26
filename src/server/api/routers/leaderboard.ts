@@ -1,4 +1,4 @@
-"use server";
+
 import { clerkClient } from "@clerk/nextjs/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
