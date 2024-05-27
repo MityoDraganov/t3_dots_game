@@ -7,12 +7,14 @@
  * need to use are documented accordingly near the end.
  */
 
-import { initTRPC, TRPCError } from "@trpc/server";
-import superjson from "superjson";
-import { ZodError } from "zod";
+import { TRPCError, initTRPC } from "@trpc/server";
 
-import { getServerAuthSession } from "~/server/auth";
+import { ZodError } from "zod";
+import { auth } from '@clerk/nextjs/server'
 import { db } from "~/server/db";
+import { getServerAuthSession } from "~/server/auth";
+import { getSession } from 'next-auth/react';
+import superjson from "superjson";
 
 /**
  * 1. CONTEXT
@@ -96,13 +98,20 @@ export const publicProcedure = t.procedure;
  * @see https://trpc.io/docs/procedures
  */
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.session || !ctx.session.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+
+  console.log('here1');
+  
+  const clerkAuth = auth();
+  console.log(clerkAuth);
+  
+  if (!clerkAuth.userId) {
+    throw new TRPCError({ code: `UNAUTHORIZED`, message: `${clerkAuth}`});
   }
+  console.log('here2');
   return next({
     ctx: {
-      // infers the `session` as non-nullable
-      session: { ...ctx.session, user: ctx.session.user },
+      ctx,
+      session: { clerkAuth },
     },
   });
 });

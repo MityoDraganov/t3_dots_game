@@ -1,5 +1,4 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { ClerkProvider } from "@clerk/nextjs";
 import {
   getServerSession,
   type DefaultSession,

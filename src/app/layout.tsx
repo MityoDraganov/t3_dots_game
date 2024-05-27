@@ -1,7 +1,9 @@
 // src/app/layout.tsx
+
 import "~/styles/globals.css";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import Footer from "./_components/footer";
 import { GeistSans } from "geist/font/sans";
 import NavBar from "./_components/navbar";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -20,12 +22,16 @@ export default function RootLayout({
   PageProps: any;
 }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} `}>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} h-screen overflow-hidden`}
+    >
       <body className="h-full bg-slate-900">
         <TRPCReactProvider>
           <ClerkProvider {...PageProps}>
             <NavBar />
             <main className="h-full">{children}</main>
+            <Footer />
           </ClerkProvider>
         </TRPCReactProvider>
       </body>

@@ -1,10 +1,10 @@
-import "server-only";
+ "server-only";
 
-import { headers } from "next/headers";
+import { PrismaClient } from "@prisma/client";
 import { cache } from "react";
-
 import { createCaller } from "~/server/api/root";
 import { createTRPCContext } from "~/server/api/trpc";
+import { headers } from "next/headers";
 
 /**
  * This wraps the `createTRPCContext` helper and provides the required context for the tRPC API when
@@ -14,8 +14,13 @@ const createContext = cache(() => {
   const heads = new Headers(headers());
   heads.set("x-trpc-source", "rsc");
 
-  return createTRPCContext({
+  // Initialize PrismaClient
+  const prisma = new PrismaClient();
+
+  return Promise.resolve({
     headers: heads,
+    db: prisma,
+    session: null, // Replace null with your Session or null if not available
   });
 });
 
